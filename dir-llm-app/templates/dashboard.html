@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}DIR-LLM - Tableau de bord{% endblock %}
+
+{% block content %}
+<div class="row mb-5">
+    <div class="col-12">
+        <h1 class="display-5 text-white">
+            <i class="fas fa-tachometer-alt"></i> Tableau de bord
+        </h1>
+        <p class="lead text-white">Bienvenue, {{ current_user.username }} !</p>
+    </div>
+</div>
+
+<!-- Statistiques utilisateur -->
+<div class="row mb-4">
+    <div class="col-md-6 col-lg-3">
+        <div class="stat-card text-center">
+            <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+            <h2 class="display-6 fw-bold">{{ total_evaluations }}</h2>
+            <p class="mb-0">Évaluations totales</p>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3">
+        <div class="stat-card text-center">
+            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+            <h2 class="display-6 fw-bold">{{ illusory_count }}</h2>
+            <p class="mb-0">Illusions détectées</p>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3">
+        <div class="stat-card text-center">
+            <i class="fas fa-percentage fa-3x mb-3"></i>
+            <h2 class="display-6 fw-bold">
+                {% if total_evaluations > 0 %}
+                    {{ "%.1f"|format(illusory_count / total_evaluations * 100) }}%
+                {% else %}
+                    0%
+                {% endif %}
+            </h2>
+            <p class="mb-0">Taux d'illusions</p>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3">
+        <div class="stat-card text-center">
+            <i class="fas fa-user-shield fa-3x mb-3"></i>
+            <h2 class="display-6 fw-bold">
+                {% if current_user.is_admin %}Admin{% else %}User{% endif %}
+            </h2>
+            <p class="mb-0">Niveau d'accès</p>
+        </div>
+    </div>
+</div>
+
+{% if current_user.is_admin and global_stats %}
+<!-- Statistiques globales (Admin) -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Statistiques Globales (Admin)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h3>{{ global_stats.total_users }}</h3>
+                        <p class="text-muted">Utilisateurs</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h3>{{ global_stats.total_evaluations }}</h3>
+                        <p class="text-muted">Évaluations</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h3>{{ global_stats.total_illusory }}</h3>
+                        <p class="text-muted">Illusions totales</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h3>
+                            {% if global_stats.total_evaluations > 0 %}
+                                {{ "%.1f"|format(global_stats.total_illusory / global_stats.total_evaluations * 100) }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </h3>
+                        <p class="text-muted">Taux global</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Actions rapides -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt"></i> Actions Rapides</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2 d-md-flex">
+                    <a href="{{ url_for('main.evaluate') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-clipboard-check"></i> Nouvelle évaluation
+                    </a>
+                    <a href="{{ url_for('main.history') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-history"></i> Voir l'historique
+                    </a>
+                    <a href="{{ url_for('main.statistics') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-chart-bar"></i> Mes statistiques
+                    </a>
+                    <a href="{{ url_for('datasets.view_datasets') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-database"></i> Datasets disponibles
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Évaluations récentes -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-clock"></i> Évaluations Récentes</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_evaluations %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Question</th>
+                                <th>Résultat</th>
+                                <th>Confiance</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for eval in recent_evaluations %}
+                            <tr>
+                                <td>{{ eval.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td class="text-truncate" style="max-width: 200px;">
+                                    {{ eval.question[:100] }}{% if eval.question|length > 100 %}...{% endif %}
+                                </td>
+                                <td>
+                                    {% if eval.is_illusory %}
+                                    <span class="badge badge-illusion">Illusoire</span>
+                                    {% else %}
+                                    <span class="badge badge-valid">Valide</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar {% if eval.is_illusory %}bg-danger{% else %}bg-success{% endif %}" 
+                                             role="progressbar" 
+                                             style="width: {{ eval.confidence * 100 }}%">
+                                        </div>
+                                    </div>
+                                    <small>{{ "%.0f"|format(eval.confidence * 100) }}%</small>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('main.evaluation_detail', eval_id=eval.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Aucune évaluation pour le moment</p>
+                    <a href="{{ url_for('main.evaluate') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Créer votre première évaluation
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

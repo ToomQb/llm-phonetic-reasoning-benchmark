@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}DIR-LLM - Cohérence #{{ consistency.id }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="text-white">
+                <i class="fas fa-sync-alt"></i> Vérification de cohérence
+            </h1>
+            <div>
+                {% if consistency.is_consistent %}
+                <span class="badge bg-success fs-6">
+                    <i class="fas fa-check"></i> Cohérent
+                </span>
+                {% else %}
+                <span class="badge bg-danger fs-6">
+                    <i class="fas fa-times"></i> Incohérent
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <p class="text-white">
+            Évaluation #{{ consistency.evaluation_id }}
+            | {{ consistency.created_at.strftime('%d/%m/%Y à %H:%M') }}
+            | {{ consistency.num_samples }} échantillons
+        </p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Score d'incohérence -->
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-header {% if consistency.is_consistent %}bg-success{% else %}bg-danger{% endif %} text-white">
+                <h5 class="mb-0">Score d'incohérence</h5>
+            </div>
+            <div class="card-body">
+                <div class="display-1 fw-bold">
+                    {{ "%.2f"|format(consistency.inconsistency_score) }}
+                </div>
+                <div class="progress mt-3" style="height: 20px;">
+                    <div class="progress-bar {% if consistency.is_consistent %}bg-success{% else %}bg-danger{% endif %}" 
+                         style="width: {{ consistency.inconsistency_score * 100 }}%">
+                    </div>
+                </div>
+                <p class="mt-3 mb-0">
+                    {% if consistency.inconsistency_score < 0.3 %}
+                    <i class="fas fa-check text-success"></i> Forte cohérence
+                    {% elif consistency.inconsistency_score < 0.7 %}
+                    <i class="fas fa-exclamation text-warning"></i> Cohérence modérée
+                    {% else %}
+                    <i class="fas fa-times text-danger"></i> Faible cohérence
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Résultats finaux -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list-check"></i> Réponses finales</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Échantillon</th>
+                                <th>Réponse finale</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in range(final_answers|length) %}
+                            <tr>
+                                <td>#{{ i+1 }}</td>
+                                <td>
+                                    <code>{{ final_answers[i][:100] }}{% if final_answers[i]|length > 100 %}...{% endif %}</code>
+                                </td>
+                                <td>
+                                    {% set is_divergent = final_answers[i] in divergent_steps %}
+                                    {% if is_divergent %}
+                                    <span class="badge bg-danger">Divergent</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Consistant</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if divergent_steps %}
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Divergences détectées :</strong>
+                    {{ divergent_steps|length }} réponses différentes
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Réponses complètes -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-file-alt"></i> Réponses complètes</h5>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="responsesAccordion">
+                    {% for i in range(responses|length) %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button {% if i != 0 %}collapsed{% endif %}" 
+                                    type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#response{{ i }}">
+                                Échantillon #{{ i+1 }}
+                                {% if final_answers[i] in divergent_steps %}
+                                <span class="badge bg-danger ms-2">Divergent</span>
+                                {% endif %}
+                            </button>
+                        </h2>
+                        <div id="response{{ i }}" 
+                             class="accordion-collapse collapse {% if i == 0 %}show{% endif %}" 
+                             data-bs-parent="#responsesAccordion">
+                            <div class="accordion-body">
+                                <pre class="bg-light p-3 rounded" style="white-space: pre-wrap;">{{ responses[i] }}</pre>
+                                <div class="mt-2">
+                                    <strong>Réponse extraite :</strong>
+                                    <code class="bg-info text-white p-1 rounded">{{ final_answers[i] }}</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analyse -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line"></i> Analyse</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Interprétation :</h6>
+                        <p>
+                            {% if consistency.is_consistent %}
+                            Le modèle montre une bonne cohérence dans ses réponses.
+                            Les variations sont mineures et n'affectent pas la conclusion principale.
+                            {% else %}
+                            Le modèle montre des incohérences significatives dans ses réponses.
+                            Cela peut indiquer une instabilité du raisonnement ou une mauvaise compréhension du problème.
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Recommandations :</h6>
+                        <ul>
+                            {% if consistency.inconsistency_score > 0.5 %}
+                            <li>Utiliser une température plus basse pour la génération</li>
+                            <li>Ajouter des contraintes au prompt</li>
+                            <li>Vérifier la formulation de la question</li>
+                            {% endif %}
+                            <li>La cohérence est un indicateur de fiabilité du raisonnement</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('main.evaluation_detail', eval_id=consistency.evaluation_id) }}" 
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left"></i> Retour à l'évaluation
+                    </a>
+                    <button class="btn btn-outline-info" onclick="window.print()">
+                        <i class="fas fa-print"></i> Imprimer le rapport
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

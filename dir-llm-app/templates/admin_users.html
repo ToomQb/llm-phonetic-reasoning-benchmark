@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+
+{% block title %}DIR-LLM - Gestion des utilisateurs{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="text-white">
+            <i class="fas fa-users"></i> Gestion des utilisateurs
+        </h1>
+        <p class="text-white">{{ users|length }} utilisateur(s) inscrit(s)</p>
+    </div>
+</div>
+
+<!-- Bouton pour créer un nouvel utilisateur -->
+<div class="row mb-4">
+    <div class="col-12">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createUserModal">
+            <i class="fas fa-user-plus"></i> Créer un nouvel utilisateur
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Liste des utilisateurs</h5>
+                    <a href="{{ url_for('admin.admin_panel') }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Admin</th>
+                                <th>Inscrit le</th>
+                                <th>Évaluations</th>
+                                <th>Annotations</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>
+                                    <strong>{{ user.username }}</strong>
+                                    {% if user.id == current_user.id %}
+                                    <span class="badge bg-primary">Vous</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    {% if user.is_admin %}
+                                    <span class="badge bg-danger">Oui</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Non</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <span class="badge bg-info" 
+                                          style="cursor: pointer;"
+                                          onclick="showUserEvaluations({{ user.id }}, '{{ user.username }}')">
+                                        {{ user.evaluations|length }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-warning">
+                                        {{ user.annotations|length }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-info" 
+                                                onclick="showUserDetails({{ user.id }})"
+                                                title="Voir détails">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning" 
+                                                onclick="editUser({{ user.id }})"
+                                                title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% if user.id != current_user.id %}
+                                        <button class="btn btn-outline-danger" 
+                                                onclick="confirmDelete({{ user.id }}, '{{ user.username }}')"
+                                                title="Supprimer">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques supplémentaires -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Répartition des rôles</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <div class="display-6 fw-bold">
+                        {% set admin_count = users|selectattr('is_admin')|list|length %}
+                        {{ "%.1f"|format((admin_count / users|length) * 100) if users|length > 0 else 0 }}%
+                    </div>
+                    <p class="text-muted">Administrateurs</p>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-danger" 
+                             style="width: {{ (admin_count / users|length) * 100 if users|length > 0 else 0 }}%">
+                            {{ admin_count }}
+                        </div>
+                        <div class="progress-bar bg-secondary" 
+                             style="width: {{ ((users|length - admin_count) / users|length) * 100 if users|length > 0 else 0 }}%">
+                            {{ users|length - admin_count }}
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-danger">Admin: {{ admin_count }}</small>
+                        <small class="text-secondary">Users: {{ users|length - admin_count }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-calendar"></i> Inscriptions récentes</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for user in users[-3:]|reverse %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>{{ user.username }}</strong>
+                                <br>
+                                <small>{{ user.email }}</small>
+                            </div>
+                            <small class="text-muted">
+                                {{ user.created_at.strftime('%d/%m') }}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour créer un utilisateur -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="createUserModalLabel">Créer un nouvel utilisateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="createUserForm" action="{{ url_for('admin.create_user') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="createUsername" class="form-label">Nom d'utilisateur *</label>
+                        <input type="text" class="form-control" id="createUsername" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="createEmail" class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="createEmail" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="createPassword" class="form-label">Mot de passe *</label>
+                        <input type="password" class="form-control" id="createPassword" name="password" required minlength="6">
+                        <small class="text-muted">Minimum 6 caractères</small>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="createIsAdmin" name="is_admin">
+                            <label class="form-check-label" for="createIsAdmin">
+                                Administrateur
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success">Créer l'utilisateur</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour modifier un utilisateur -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title" id="editUserModalLabel">Modifier l'utilisateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editUserForm" action="" method="POST">
+                <input type="hidden" id="editUserId" name="user_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editUsername" class="form-label">Nom d'utilisateur *</label>
+                        <input type="text" class="form-control" id="editUsername" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editEmail" class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="editEmail" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPassword" class="form-label">Nouveau mot de passe</label>
+                        <input type="password" class="form-control" id="editPassword" name="new_password">
+                        <small class="text-muted">Laissez vide pour ne pas changer</small>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editIsAdmin" name="is_admin">
+                            <label class="form-check-label" for="editIsAdmin">
+                                Administrateur
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-warning">Mettre à jour</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour voir les détails d'un utilisateur -->
+<div class="modal fade" id="viewUserModal" tabindex="-1" aria-labelledby="viewUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="viewUserModalLabel">Détails de l'utilisateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="viewUserModalBody">
+                <!-- Contenu chargé par JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour voir les évaluations d'un utilisateur -->
+<div class="modal fade" id="userEvaluationsModal" tabindex="-1" aria-labelledby="userEvaluationsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="userEvaluationsModalLabel">Évaluations de l'utilisateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="userEvaluationsContent">
+                    <!-- Contenu chargé par JavaScript -->
+                </div>
+                <div id="userEvaluationsPagination" class="d-flex justify-content-center mt-3">
+                    <!-- Pagination chargée par JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fonction pour afficher les détails d'un utilisateur
+function showUserDetails(userId) {
+    fetch(`/admin/users/${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            const modalBody = document.getElementById('viewUserModalBody');
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>ID :</strong> ${data.id}</p>
+                        <p><strong>Nom d'utilisateur :</strong> ${data.username}</p>
+                        <p><strong>Email :</strong> ${data.email}</p>
+                        <p><strong>Administrateur :</strong> 
+                            <span class="badge ${data.is_admin ? 'bg-danger' : 'bg-secondary'}">
+                                ${data.is_admin ? 'Oui' : 'Non'}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Inscrit le :</strong> ${new Date(data.created_at).toLocaleDateString('fr-FR')}</p>
+                        <p><strong>Nombre d'évaluations :</strong> 
+                            <span class="badge bg-info">${data.evaluation_count}</span>
+                        </p>
+                        <p><strong>Nombre d'annotations :</strong> 
+                            <span class="badge bg-warning">${data.annotation_count}</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    Créé le ${new Date(data.created_at).toLocaleString('fr-FR')}
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('viewUserModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur lors du chargement des détails');
+        });
+}
+
+// Fonction pour modifier un utilisateur
+function editUser(userId) {
+    fetch(`/admin/users/${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('editUserId').value = data.id;
+            document.getElementById('editUsername').value = data.username;
+            document.getElementById('editEmail').value = data.email;
+            document.getElementById('editIsAdmin').checked = data.is_admin;
+            
+            // Mettre à jour l'action du formulaire
+            document.getElementById('editUserForm').action = `/admin/users/${userId}/update`;
+            
+            const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur lors du chargement des données');
+        });
+}
+
+// Fonction pour supprimer un utilisateur
+function confirmDelete(userId, username) {
+    if (confirm(`Supprimer l'utilisateur "${username}" ?\n\nCette action supprimera également toutes ses évaluations et annotations.`)) {
+        
+        fetch(`/admin/users/${userId}/delete`, {
+            method: 'POST'
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                response.text().then(text => {
+                    alert('Erreur : ' + text);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur réseau');
+        });
+    }
+}
+
+// Fonction pour afficher les évaluations d'un utilisateur
+function showUserEvaluations(userId, username) {
+    loadUserEvaluationsPage(userId, username, 1);
+}
+
+function loadUserEvaluationsPage(userId, username, page) {
+    fetch(`/admin/users/${userId}/evaluations?page=${page}`)
+        .then(response => response.json())
+        .then(data => {
+            const content = document.getElementById('userEvaluationsContent');
+            const pagination = document.getElementById('userEvaluationsPagination');
+            
+            // Mettre à jour le titre
+            document.getElementById('userEvaluationsModalLabel').textContent = 
+                `Évaluations de ${data.user.username} (${data.pagination.total})`;
+            
+            // Afficher les évaluations
+            if (data.evaluations.length === 0) {
+                content.innerHTML = '<p class="text-center text-muted">Aucune évaluation</p>';
+            } else {
+                let html = `
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Question</th>
+                                    <th>Résultat</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                data.evaluations.forEach(eval => {
+                    html += `
+                        <tr>
+                            <td>${eval.id}</td>
+                            <td>${eval.question}</td>
+                            <td>
+                                <span class="badge ${eval.is_illusory ? 'bg-danger' : 'bg-success'}">
+                                    ${eval.is_illusory ? 'Illusoire' : 'Valide'}
+                                </span>
+                            </td>
+                            <td>${eval.created_at}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                content.innerHTML = html;
+            }
+            
+            // Afficher la pagination
+            if (data.pagination.pages > 1) {
+                let paginationHtml = '<nav><ul class="pagination">';
+                
+                // Bouton précédent
+                if (data.pagination.has_prev) {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link" href="#" onclick="loadUserEvaluationsPage(${userId}, '${username}', ${page-1})">
+                                &laquo;
+                            </a>
+                        </li>
+                    `;
+                }
+                
+                // Pages
+                for (let p = 1; p <= data.pagination.pages; p++) {
+                    paginationHtml += `
+                        <li class="page-item ${p === page ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="loadUserEvaluationsPage(${userId}, '${username}', ${p})">
+                                ${p}
+                            </a>
+                        </li>
+                    `;
+                }
+                
+                // Bouton suivant
+                if (data.pagination.has_next) {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link" href="#" onclick="loadUserEvaluationsPage(${userId}, '${username}', ${page+1})">
+                                &raquo;
+                            </a>
+                        </li>
+                    `;
+                }
+                
+                paginationHtml += '</ul></nav>';
+                pagination.innerHTML = paginationHtml;
+            } else {
+                pagination.innerHTML = '';
+            }
+            
+            // Afficher le modal
+            const modal = new bootstrap.Modal(document.getElementById('userEvaluationsModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur lors du chargement des évaluations');
+        });
+}
+
+// Validation du formulaire de création
+document.getElementById('createUserForm').addEventListener('submit', function(e) {
+    const password = document.getElementById('createPassword').value;
+    if (password.length < 6) {
+        e.preventDefault();
+        alert('Le mot de passe doit contenir au moins 6 caractères');
+    }
+});
+
+// Validation du formulaire de modification
+document.getElementById('editUserForm').addEventListener('submit', function(e) {
+    const password = document.getElementById('editPassword').value;
+    if (password && password.length < 6) {
+        e.preventDefault();
+        alert('Le mot de passe doit contenir au moins 6 caractères');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}DIR-LLM - Typologie des illusions{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="text-white">
+            <i class="fas fa-tags"></i> Typologie des illusions
+        </h1>
+        <p class="text-white">
+            {{ illusion_types|length }} types d'illusions définis
+        </p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Formulaire d'ajout -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Ajouter un type</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.add_illusion_type') }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nom technique</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="ex: inference_error" required>
+                        <small class="text-muted">Utilisez des underscores, pas d'espaces</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Catégorie</label>
+                        <select class="form-select" id="category" name="category" required>
+                            <option value="logical">Logique</option>
+                            <option value="causal">Causalité</option>
+                            <option value="argumentative">Argumentation</option>
+                            <option value="statistical">Statistique</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" 
+                                  rows="3" required placeholder="Description claire et concise..."></textarea>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="example" class="form-label">Exemple</label>
+                        <textarea class="form-control" id="example" name="example" 
+                                  rows="2" placeholder="Exemple concret..."></textarea>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Ajouter le type
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> À propos</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    La typologie des illusions permet de catégoriser les erreurs de raisonnement
+                    détectées par le système. Chaque type doit être :
+                </p>
+                <ul class="small text-muted">
+                    <li>Distinct des autres types</li>
+                    <li>Bien défini et reconnaissable</li>
+                    <li>Utile pour l'analyse scientifique</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Liste des types existants -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Types d'illusions définis</h5>
+                    <span class="badge bg-primary">{{ illusion_types|length }} types</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Catégorie</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for illusion_type in illusion_types %}
+                            <tr>
+                                <td>
+                                    <strong>{{ illusion_type.name }}</strong>
+                                    {% if illusion_type.example %}
+                                    <br>
+                                    <small class="text-muted">{{ illusion_type.example[:50] }}...</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge 
+                                        {% if illusion_type.category == 'logical' %}bg-danger
+                                        {% elif illusion_type.category == 'causal' %}bg-warning
+                                        {% elif illusion_type.category == 'argumentative' %}bg-info
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ illusion_type.category }}
+                                    </span>
+                                </td>
+                                <td>{{ illusion_type.description[:100] }}{% if illusion_type.description|length > 100 %}...{% endif %}</td>
+                                <td>
+                                    <form action="{{ url_for('admin.delete_illusion_type', type_id=illusion_type.id) }}" 
+                                          method="POST" class="d-inline"
+                                          onsubmit="return confirm('Supprimer ce type d\'illusion ?');">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistiques par catégorie -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Répartition par catégorie</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% set categories = {'logical': 0, 'causal': 0, 'argumentative': 0, 'statistical': 0} %}
+                    {% for illusion_type in illusion_types %}
+                        {% set _ = categories.update({illusion_type.category: categories[illusion_type.category] + 1}) %}
+                    {% endfor %}
+                    
+                    {% for category, count in categories.items() %}
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <div class="display-6 fw-bold">{{ count }}</div>
+                                <p class="card-text text-muted text-capitalize">{{ category }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="progress mt-3" style="height: 20px;">
+                    {% set total = illusion_types|length %}
+                    {% for category, count in categories.items() %}
+                        {% if count > 0 %}
+                        <div class="progress-bar 
+                            {% if category == 'logical' %}bg-danger
+                            {% elif category == 'causal' %}bg-warning
+                            {% elif category == 'argumentative' %}bg-info
+                            {% else %}bg-secondary{% endif %}" 
+                             style="width: {{ (count / total) * 100 }}%"
+                             title="{{ category }}: {{ count }}">
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export/Import -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-database"></i> Gestion de la typologie</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Attention :</strong> La suppression d'un type d'illusion affectera toutes les évaluations
+                    qui l'utilisent. Cette action est irréversible.
+                </div>
+                
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('admin.admin_panel') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left"></i> Retour à l'administration
+                    </a>
+                    <button class="btn btn-outline-success" onclick="exportTypology()">
+                        <i class="fas fa-download"></i> Exporter la typologie
+                    </button>
+                    <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="fas fa-upload"></i> Importer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'import -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importModalLabel">Importer une typologie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Format attendu : JSON avec une liste d'objets contenant 
+                    name, category, description, example
+                </div>
+                <textarea class="form-control" rows="10" placeholder="Collez le JSON ici..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary">Importer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportTypology() {
+    const typology = [
+        {% for illusion_type in illusion_types %}
+        {
+            name: "{{ illusion_type.name }}",
+            category: "{{ illusion_type.category }}",
+            description: "{{ illusion_type.description }}",
+            example: "{{ illusion_type.example or '' }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const dataStr = JSON.stringify(typology, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `dirllm_typology_${new Date().toISOString().slice(0,10)}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+}
+</script>
+{% endblock %}

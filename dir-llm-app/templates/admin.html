@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}DIR-LLM - Administration{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="text-white">
+            <i class="fas fa-user-shield"></i> Panneau d'administration
+        </h1>
+        <p class="text-white">Gestion complète de l'application</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Menu d'administration -->
+    <div class="col-md-3 mb-4">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-cogs"></i> Menu Admin</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('admin.admin_users') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users"></i> Gestion des utilisateurs
+                </a>
+                <a href="{{ url_for('datasets.admin_datasets') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-database"></i> Gestion des datasets
+                </a>
+                <a href="{{ url_for('scientific.scientific_experiments') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-flask"></i> Expériences scientifiques
+                </a>
+                <a href="{{ url_for('admin.manage_illusion_types') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tags"></i> Typologie des illusions
+                </a>
+                <a href="{{ url_for('main.dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-arrow-left"></i> Retour au tableau de bord
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Vue d'ensemble -->
+    <div class="col-md-9">
+        <div class="row">
+            <!-- Statistiques globales -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Vue d'ensemble</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <div class="display-6 fw-bold">{{ users|length }}</div>
+                                <p class="text-muted">Utilisateurs</p>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="display-6 fw-bold">{{ datasets|length }}</div>
+                                <p class="text-muted">Datasets</p>
+                            </div>
+                            <div class="col-md-3">
+                                {% set total_samples = datasets|sum(attribute='total_samples') %}
+                                <div class="display-6 fw-bold">{{ total_samples }}</div>
+                                <p class="text-muted">Échantillons</p>
+                            </div>
+                            <div class="col-md-3">
+                                {% set total_evaluations = namespace(count=0) %}
+                                {% for user in users %}
+                                    {% set total_evaluations.count = total_evaluations.count + user.evaluations|length %}
+                                {% endfor %}
+                                <div class="display-6 fw-bold">{{ total_evaluations.count }}</div>
+                                <p class="text-muted">Évaluations</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Derniers utilisateurs -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-user-clock"></i> Derniers utilisateurs</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            {% for user in users[-5:]|reverse %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ user.username }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ user.email }}</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge {% if user.is_admin %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {% if user.is_admin %}Admin{% else %}User{% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar"></i> Inscrit le {{ user.created_at.strftime('%d/%m/%Y') }}
+                                </small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Datasets disponibles -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-database"></i> Datasets disponibles</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            {% for dataset in datasets %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ dataset.name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ dataset.description[:50] }}...</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-primary">{{ dataset.total_samples }} éch.</span>
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-tag"></i> {{ dataset.category }}
+                                </small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions rapides -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-bolt"></i> Actions rapides</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-2">
+                                <a href="{{ url_for('datasets.admin_datasets') }}" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-plus-circle"></i> Charger un dataset
+                                </a>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <a href="{{ url_for('scientific.scientific_experiments') }}" class="btn btn-outline-success w-100">
+                                    <i class="fas fa-flask"></i> Lancer une expérience
+                                </a>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <a href="{{ url_for('api.api_illusion_types') }}" class="btn btn-outline-info w-100">
+                                    <i class="fas fa-edit"></i> Modifier la typologie
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

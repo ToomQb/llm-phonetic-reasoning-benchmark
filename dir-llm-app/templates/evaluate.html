@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}DIR-LLM - Évaluation{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="text-white mb-4">
+            <i class="fas fa-clipboard-check"></i> Évaluer un raisonnement
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-edit"></i> Formulaire d'évaluation</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('main.evaluate') }}">
+                    <div class="mb-3">
+                        <label for="question" class="form-label">Question / Problème</label>
+                        <textarea class="form-control" id="question" name="question" rows="3" required
+                                  placeholder="Entrez la question ou le problème posé au LLM...">{% if prefill_question %}{{ prefill_question }}{% endif %}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="llm_response" class="form-label">Réponse du LLM</label>
+                        <textarea class="form-control" id="llm_response" name="llm_response" rows="6" required
+                                  placeholder="Collez ici la réponse complète du modèle de langage..."></textarea>
+                        <small class="text-muted">Incluez le raisonnement complet, pas seulement la réponse finale</small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="expected_answer" class="form-label">Réponse attendue (optionnel)</label>
+                                <input type="text" class="form-control" id="expected_answer" name="expected_answer"
+                                       placeholder="La réponse correcte si connue..."
+                                       value="{% if prefill_answer %}{{ prefill_answer }}{% endif %}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="dataset_name" class="form-label">Dataset (optionnel)</label>
+                                {% set selected_dataset = prefill_dataset or 'Custom' %}
+                                <select class="form-select" name="dataset_name">
+                                    <option value="Custom" {{ 'selected' if selected_dataset == 'Custom' else '' }}>Custom</option>
+                                    <option value="ProntoQA" {{ 'selected' if selected_dataset == 'ProntoQA' else '' }}>ProntoQA</option>
+                                    <option value="FOLIO" {{ 'selected' if selected_dataset == 'FOLIO' else '' }}>FOLIO</option>
+                                    <option value="LogiQA" {{ 'selected' if selected_dataset == 'LogiQA' else '' }}>LogiQA</option>
+                                    <option value="GSM8K" {{ 'selected' if selected_dataset == 'GSM8K' else '' }}>GSM8K</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-play"></i> Lancer l'évaluation
+                        </button>
+                        <button type="reset" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-redo"></i> Effacer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mt-4 mt-lg-0">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Instructions</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Copiez la réponse COMPLÈTE du LLM</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Incluez le raisonnement étape par étape</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Soyez précis dans la question</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Ajoutez la réponse attendue si disponible</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-database"></i> Exemples de datasets</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Utilisez des exemples de nos datasets :</p>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('datasets.view_datasets') }}" class="btn btn-outline-info">
+                        <i class="fas fa-search"></i> Parcourir les datasets
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Exemple d'autocomplétion pour aider l'utilisateur
+    const exampleQuestion = "Tous les hommes sont mortels. Socrate est un homme. Socrate est-il mortel ?";
+    const exampleResponse = "Oui, Socrate est mortel. Puisque tous les hommes sont mortels et que Socrate est un homme, il suit logiquement que Socrate est mortel.";
+    
+    document.getElementById('question').addEventListener('focus', function() {
+        if (!this.value.trim()) {
+            this.placeholder = exampleQuestion;
+        }
+    });
+});
+</script>
+{% endblock %}

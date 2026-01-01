@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}DIR-LLM - Annoter évaluation #{{ evaluation.id }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="text-white">
+                <i class="fas fa-highlighter"></i> Annoter l'évaluation #{{ evaluation.id }}
+            </h1>
+            <div>
+                <span id="timer" class="badge bg-info fs-6">00:00</span>
+            </div>
+        </div>
+        <p class="text-white">
+            Comparez votre analyse avec celle de l'IA
+        </p>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('annotations.annotate_evaluation', eval_id=evaluation.id) }}">
+    <input type="hidden" name="start_time" value="{{ start_time }}">
+    
+    <div class="row">
+        <!-- Évaluation originale -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-robot"></i> Évaluation originale par Gemini</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Question</label>
+                        <div class="bg-light p-3 rounded">
+                            {{ evaluation.question }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Réponse du LLM</label>
+                        <div class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                            <pre style="white-space: pre-wrap; margin: 0;">{{ evaluation.llm_response }}</pre>
+                        </div>
+                    </div>
+                    
+                    {% if evaluation.expected_answer %}
+                    <div class="mb-3">
+                        <label class="form-label">Réponse attendue</label>
+                        <div class="bg-success text-white p-2 rounded">
+                            {{ evaluation.expected_answer }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="alert {% if evaluation.is_illusory %}alert-danger{% else %}alert-success{% endif %}">
+                        <strong>Résultat Gemini :</strong>
+                        {% if evaluation.is_illusory %}
+                        <i class="fas fa-exclamation-triangle"></i> Illusoire
+                        {% else %}
+                        <i class="fas fa-check-circle"></i> Valide
+                        {% endif %}
+                        <br>
+                        <strong>Confiance :</strong> {{ "%.0f"|format(evaluation.confidence * 100) }}%
+                        <br>
+                        <strong>Explication :</strong> {{ evaluation.explanation }}
+                        {% if evaluation.get_illusion_types() %}
+                        <br>
+                        <strong>Types détectés :</strong>
+                        {% for itype in evaluation.get_illusion_types() %}
+                        <span class="badge bg-warning text-dark">{{ itype }}</span>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Formulaire d'annotation -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-user-check"></i> Votre annotation</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Jugement principal -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Ce raisonnement est-il illusoire ?</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="is_illusory" id="illusory_yes" 
+                                   value="true" {% if existing and existing.is_illusory %}checked{% endif %}>
+                            <label class="btn btn-outline-danger" for="illusory_yes">
+                                <i class="fas fa-exclamation-triangle"></i> Oui, illusoire
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="is_illusory" id="illusory_no" 
+                                   value="false" {% if existing and not existing.is_illusory %}checked{% endif %}>
+                            <label class="btn btn-outline-success" for="illusory_no">
+                                <i class="fas fa-check-circle"></i> Non, valide
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Types d'illusions -->
+                    <div class="mb-4" id="illusionTypesSection" style="display: none;">
+                        <label class="form-label fw-bold">Types d'illusions détectés</label>
+                        <div class="row">
+                            {% for illusion_type in illusion_types %}
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="illusion_types" value="{{ illusion_type.name }}"
+                                           id="type_{{ illusion_type.id }}"
+                                           {% if existing and illusion_type.name in existing.get_illusion_types() %}checked{% endif %}>
+                                    <label class="form-check-label" for="type_{{ illusion_type.id }}">
+                                        <strong>{{ illusion_type.name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ illusion_type.description[:80] }}...</small>
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Explication -->
+                    <div class="mb-4">
+                        <label for="explanation" class="form-label fw-bold">Votre explication</label>
+                        <textarea class="form-control" id="explanation" name="explanation" 
+                                  rows="4" placeholder="Expliquez votre jugement...">
+                            {% if existing %}{{ existing.explanation }}{% endif %}
+                        </textarea>
+                        <small class="text-muted">Soyez précis et objectif</small>
+                    </div>
+                    
+                    <!-- Confiance -->
+                    <div class="mb-4">
+                        <label for="confidence" class="form-label fw-bold">
+                            Votre confiance : <span id="confidenceValue">50%</span>
+                        </label>
+                        <input type="range" class="form-range" id="confidence" name="confidence" 
+                               min="0" max="1" step="0.1" value="{% if existing %}{{ existing.confidence }}{% else %}0.5{% endif %}"
+                               oninput="document.getElementById('confidenceValue').textContent = Math.round(this.value * 100) + '%'">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Peu sûr</small>
+                            <small class="text-muted">Très sûr</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Boutons -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-save"></i> Enregistrer l'annotation
+                        </button>
+                        <a href="{{ url_for('annotations.annotate_list') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Annuler
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Conseils d'annotation</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-search text-primary"></i> Analysez</h6>
+                        <p class="small text-muted">Cherchez les erreurs de logique, les contradictions, les généralisations abusives.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-balance-scale text-warning"></i> Soyez objectif</h6>
+                        <p class="small text-muted">Ne vous laissez pas influencer par l'évaluation de l'IA.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-file-alt text-success"></i> Détaillez</h6>
+                        <p class="small text-muted">Une explication claire aide à améliorer le système.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Timer d'annotation
+let startTime = Date.now();
+const timerElement = document.getElementById('timer');
+
+function updateTimer() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const seconds = (elapsed % 60).toString().padStart(2, '0');
+    timerElement.textContent = `${minutes}:${seconds}`;
+}
+
+setInterval(updateTimer, 1000);
+
+// Afficher/masquer les types d'illusions
+const illusoryRadios = document.querySelectorAll('input[name="is_illusory"]');
+const typesSection = document.getElementById('illusionTypesSection');
+
+function toggleTypesSection() {
+    const isIllusory = document.querySelector('input[name="is_illusory"]:checked');
+    if (isIllusory && isIllusory.value === 'true') {
+        typesSection.style.display = 'block';
+    } else {
+        typesSection.style.display = 'none';
+    }
+}
+
+illusoryRadios.forEach(radio => {
+    radio.addEventListener('change', toggleTypesSection);
+});
+
+// Initialiser l'affichage
+toggleTypesSection();
+
+// Initialiser la valeur de confiance
+const confidenceSlider = document.getElementById('confidence');
+const confidenceValue = document.getElementById('confidenceValue');
+confidenceValue.textContent = Math.round(confidenceSlider.value * 100) + '%';
+
+// // Empêcher la fermeture accidentelle
+// window.addEventListener('beforeunload', function (e) {
+//     e.preventDefault();
+//     e.returnValue = '';
+// });
+</script>
+{% endblock %}

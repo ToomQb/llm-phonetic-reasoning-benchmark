@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}DIR-LLM - Statistiques{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="text-white">
+            <i class="fas fa-chart-bar"></i> Mes statistiques
+        </h1>
+        <p class="text-white">Analyse de vos évaluations</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Statistiques principales -->
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <i class="fas fa-chart-line fa-3x mb-3"></i>
+            <h2 class="display-6 fw-bold">{{ stats.total }}</h2>
+            <p class="mb-0">Évaluations totales</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+            <h2 class="display-6 fw-bold">{{ stats.illusory }}</h2>
+            <p class="mb-0">Illusions détectées</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <i class="fas fa-check-circle fa-3x mb-3"></i>
+            <h2 class="display-6 fw-bold">{{ stats.valid }}</h2>
+            <p class="mb-0">Raisonnements valides</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <i class="fas fa-percentage fa-3x mb-3"></i>
+            <h2 class="display-6 fw-bold">{{ "%.1f"|format(stats.illusion_rate) }}%</h2>
+            <p class="mb-0">Taux d'illusions</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Distribution des types d'illusions -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-tags"></i> Distribution des types d'illusions</h5>
+            </div>
+            <div class="card-body">
+                {% if stats.illusion_distribution %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Type d'illusion</th>
+                                <th>Occurrences</th>
+                                <th>Pourcentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for illusion_type, count in stats.illusion_distribution.items() %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-warning text-dark">{{ illusion_type }}</span>
+                                </td>
+                                <td>{{ count }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1" style="height: 10px;">
+                                            <div class="progress-bar bg-warning" 
+                                                 style="width: {{ (count / stats.illusory * 100) if stats.illusory > 0 else 0 }}%">
+                                            </div>
+                                        </div>
+                                        <small class="ms-2">
+                                            {{ "%.1f"|format((count / stats.illusory * 100) if stats.illusory > 0 else 0) }}%
+                                        </small>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Aucune illusion détectée pour l'instant</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Résumé statistique -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Résumé</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Confiance moyenne</span>
+                        <span class="badge bg-primary rounded-pill">
+                            {{ "%.1f"|format(stats.avg_confidence * 100) }}%
+                        </span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Ratio illusions/valides</span>
+                        <span class="badge {% if stats.illusion_rate > 50 %}bg-danger{% else %}bg-success{% endif %} rounded-pill">
+                            {{ stats.illusory }}:{{ stats.valid }}
+                        </span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Types d'illusions uniques</span>
+                        <span class="badge bg-info rounded-pill">
+                            {{ stats.illusion_distribution|length }}
+                        </span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Illusion la plus fréquente</span>
+                        <span class="badge bg-warning text-dark">
+                            {% if stats.illusion_distribution %}
+                                {{ stats.illusion_distribution|dictsort(by='value')|last|first }}
+                            {% else %}
+                                Aucune
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>Recommandations :</h6>
+                    <ul class="list-unstyled">
+                        {% if stats.illusory == 0 %}
+                        <li class="mb-1"><i class="fas fa-check text-success me-2"></i> Excellent ! Aucune illusion détectée</li>
+                        {% elif stats.illusion_rate < 20 %}
+                        <li class="mb-1"><i class="fas fa-check text-success me-2"></i> Bon taux de détection</li>
+                        {% elif stats.illusion_rate < 50 %}
+                        <li class="mb-1"><i class="fas fa-exclamation text-warning me-2"></i> Taux d'illusions modéré</li>
+                        {% else %}
+                        <li class="mb-1"><i class="fas fa-exclamation-triangle text-danger me-2"></i> Taux d'illusions élevé</li>
+                        {% endif %}
+                        
+                        {% if stats.avg_confidence < 0.7 %}
+                        <li class="mb-1"><i class="fas fa-info-circle text-info me-2"></i> Confiance moyenne basse</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-download"></i> Export des données</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-outline-primary" onclick="exportStats()">
+                        <i class="fas fa-file-export"></i> Exporter en JSON
+                    </button>
+                    <a href="{{ url_for('main.history') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-history"></i> Voir l'historique complet
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportStats() {
+    const statsData = {
+        total: {{ stats.total }},
+        illusory: {{ stats.illusory }},
+        valid: {{ stats.valid }},
+        illusion_rate: {{ stats.illusion_rate }},
+        avg_confidence: {{ stats.avg_confidence }},
+        illusion_distribution: {{ stats.illusion_distribution|tojson }}
+    };
+    
+    const dataStr = JSON.stringify(statsData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `dirllm_stats_${new Date().toISOString().slice(0,10)}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+}
+</script>
+{% endblock %}

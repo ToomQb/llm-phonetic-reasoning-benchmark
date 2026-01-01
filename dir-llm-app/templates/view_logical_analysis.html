@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}DIR-LLM - Analyse logique #{{ analysis.id }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="text-white">
+                <i class="fas fa-code"></i> Analyse logique
+            </h1>
+            <div>
+                {% set errors_found = analysis.has_contradiction|int + analysis.has_circular_reasoning|int + analysis.has_invalid_quantifier|int %}
+                <span class="badge {% if errors_found > 0 %}bg-danger{% else %}bg-success{% endif %} fs-6">
+                    {{ errors_found }} erreur(s) détectée(s)
+                </span>
+            </div>
+        </div>
+        <p class="text-white">
+            Évaluation #{{ analysis.evaluation_id }}
+            | {{ analysis.created_at.strftime('%d/%m/%Y à %H:%M') }}
+            | Analyse automatique sans LLM
+        </p>
+    </div>
+</div>
+
+<!-- Résumé des détections -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-header {% if analysis.has_contradiction %}bg-danger text-white{% else %}bg-success text-white{% endif %}">
+                <h5 class="mb-0">Contradictions</h5>
+            </div>
+            <div class="card-body">
+                <div class="display-4 fw-bold">
+                    {% if analysis.has_contradiction %}
+                    <i class="fas fa-times text-danger"></i>
+                    {% else %}
+                    <i class="fas fa-check text-success"></i>
+                    {% endif %}
+                </div>
+                <p class="card-text">
+                    {% if analysis.has_contradiction %}
+                    {{ contradictions|length }} contradiction(s) trouvée(s)
+                    {% else %}
+                    Aucune contradiction
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-header {% if analysis.has_circular_reasoning %}bg-warning text-white{% else %}bg-success text-white{% endif %}">
+                <h5 class="mb-0">Raisonnement circulaire</h5>
+            </div>
+            <div class="card-body">
+                <div class="display-4 fw-bold">
+                    {% if analysis.has_circular_reasoning %}
+                    <i class="fas fa-redo text-warning"></i>
+                    {% else %}
+                    <i class="fas fa-check text-success"></i>
+                    {% endif %}
+                </div>
+                <p class="card-text">
+                    {% if analysis.has_circular_reasoning %}
+                    Raisonnement circulaire détecté
+                    {% else %}
+                    Aucun raisonnement circulaire
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-header {% if analysis.has_invalid_quantifier %}bg-info text-white{% else %}bg-success text-white{% endif %}">
+                <h5 class="mb-0">Erreurs de quantificateurs</h5>
+            </div>
+            <div class="card-body">
+                <div class="display-4 fw-bold">
+                    {% if analysis.has_invalid_quantifier %}
+                    <i class="fas fa-chart-bar text-info"></i>
+                    {% else %}
+                    <i class="fas fa-check text-success"></i>
+                    {% endif %}
+                </div>
+                <p class="card-text">
+                    {% if analysis.has_invalid_quantifier %}
+                    Erreur de quantificateur détectée
+                    {% else %}
+                    Aucune erreur de quantificateur
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Détails des contradictions -->
+{% if contradictions %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Contradictions détaillées</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for contradiction in contradictions %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-danger">
+                            <div class="card-body">
+                                <h6>Contradiction #{{ loop.index }}</h6>
+                                <p class="mb-1"><strong>Type :</strong> {{ contradiction.type }}</p>
+                                <div class="alert alert-danger mb-2">
+                                    <strong>Phrase 1 :</strong><br>
+                                    "{{ contradiction.sentence1 }}"
+                                </div>
+                                <div class="alert alert-warning">
+                                    <strong>Phrase 2 :</strong><br>
+                                    "{{ contradiction.sentence2 }}"
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Détails du raisonnement circulaire -->
+{% if circular_patterns %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-warning text-white">
+                <h5 class="mb-0"><i class="fas fa-redo"></i> Raisonnement circulaire</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for pattern in circular_patterns %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-warning">
+                            <div class="card-body">
+                                <h6>Pattern #{{ loop.index }}</h6>
+                                <p class="mb-1"><strong>Type :</strong> {{ pattern.type }}</p>
+                                <div class="alert alert-warning">
+                                    <strong>Cycle détecté :</strong><br>
+                                    1. {{ pattern.step1 }}<br>
+                                    2. {{ pattern.step2 }}
+                                </div>
+                                <p class="mb-0 text-muted small">
+                                    La conclusion dépend d'une prémisse qui dépend elle-même de la conclusion.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Autres erreurs logiques -->
+{% if logical_errors %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-bug"></i> Autres erreurs logiques</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for error in logical_errors %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-info">
+                            <div class="card-body">
+                                <h6>{{ error.type|replace('_', ' ')|title }}</h6>
+                                <p class="mb-0">{{ error.text }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Explication de l'analyse -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb"></i> À propos de cette analyse</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Méthodologie :</h6>
+                        <p class="small">
+                            Cette analyse utilise des règles logiques formelles et des patterns de détection
+                            sans faire appel à un LLM. Elle recherche :
+                        </p>
+                        <ul class="small">
+                            <li>Contradictions directes entre phrases</li>
+                            <li>Raisonnement circulaire (A parce que B, B parce que A)</li>
+                            <li>Erreurs de quantificateurs (tous/certains)</li>
+                            <li>Fausses dichotomies (soit... soit...)</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Limitations :</h6>
+                        <ul class="small">
+                            <li>Analyse uniquement syntaxique et structurelle</li>
+                            <li>Ne comprend pas le sens sémantique</li>
+                            <li>Détecte seulement les patterns prédéfinis</li>
+                            <li>Peut produire des faux positifs/négatifs</li>
+                        </ul>
+                        <div class="alert alert-info small mt-3">
+                            <i class="fas fa-info-circle"></i>
+                            Cette analyse complète mais ne remplace pas l'évaluation par un LLM.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('main.evaluation_detail', eval_id=analysis.evaluation_id) }}" 
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left"></i> Retour à l'évaluation
+                    </a>
+                    <button class="btn btn-outline-info" onclick="window.print()">
+                        <i class="fas fa-print"></i> Imprimer l'analyse
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
