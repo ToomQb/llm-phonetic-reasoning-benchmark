@@ -1,0 +1,697 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Charades Phonétiques</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    
+    <style>
+        .prompt-btn.active {
+            font-weight: bold;
+            transform: scale(1.02);
+            transition: all 0.2s;
+        }
+        
+        .charade-item {
+            transition: all 0.2s;
+        }
+        
+        .charade-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        #history-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        #history-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        #history-list::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        #history-list::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-6">
+        <!-- En-tête -->
+        <header class="mb-8">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-blue-800">
+                        <i class="fas fa-puzzle-piece mr-2"></i>Générateur de Charades
+                    </h1>
+                    <p class="text-gray-600">Générez des charades phonétiques avec Gemini</p>
+                </div>
+                <div class="mt-4 md:mt-0">
+                    <button id="btn-show-stats" class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200">
+                        <i class="fas fa-chart-bar mr-2"></i>Statistiques
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Panneau de génération -->
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-wand-magic-sparkles mr-2"></i>Générer une Charade
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-medium">Type de prompt:</label>
+                        <div class="flex space-x-2">
+                            <button id="btn-simple" class="prompt-btn flex-1 py-2 px-3 rounded-lg bg-blue-100 text-blue-700 border-2 border-blue-300 font-medium">
+                                <i class="fas fa-bolt mr-2"></i>Simple
+                            </button>
+                            <button id="btn-engineered" class="prompt-btn flex-1 py-2 px-3 rounded-lg bg-gray-100 text-gray-700 border-2 border-gray-300">
+                                <i class="fas fa-cogs mr-2"></i>CoT-FewShot
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-medium">Difficulté:</label>
+                        <select id="difficulty" class="w-full p-2 border rounded-lg bg-white">
+                            <option value="easy">Facile</option>
+                            <option value="medium">Moyen</option>
+                            <option value="hard">Difficile</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-medium">Mot cible (optionnel):</label>
+                        <input type="text" id="target-word" class="w-full p-2 border rounded-lg" placeholder="Ex: chocolat, ordinateur...">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-medium">Segments:</label>
+                        <select id="num-segments" class="w-full p-2 border rounded-lg bg-white">
+                            <option value="2">2 segments</option>
+                            <option value="3" selected>3 segments</option>
+                            <option value="4">4 segments</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button id="btn-generate" class="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                    <i class="fas fa-sparkles mr-2"></i>Générer la Charade
+                </button>
+                
+                <div id="loading" class="hidden mt-4 p-4 bg-blue-50 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
+                        <span class="text-blue-700 font-medium">Génération en cours...</span>
+                    </div>
+                </div>
+                
+                <!-- Résultat de la génération -->
+                <div id="generation-result" class="hidden mt-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Charade Générée</h3>
+                    <div id="charade-display" class="bg-gray-50 rounded-lg p-4">
+                        <!-- La charade sera affichée ici -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panneau historique -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-history mr-2"></i>Historique
+                </h2>
+                
+                <div class="mb-4">
+                    <input type="text" id="search-history" class="w-full p-2 border rounded-lg" placeholder="Rechercher...">
+                </div>
+                
+                <div id="history-list" class="space-y-3 max-h-[500px] overflow-y-auto">
+                    <!-- L'historique sera chargé ici -->
+                </div>
+                
+                <div class="mt-4 flex justify-between">
+                    <button id="btn-prev" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span id="page-info" class="text-gray-600">Page 1</span>
+                    <button id="btn-next" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modale pour les détails -->
+        <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style="display: none;">
+            <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-bold text-gray-800" id="modal-title"></h3>
+                        <button id="btn-close-modal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+                    <div id="modal-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        // Configuration toastr
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "timeOut": "3000"
+        };
+
+        let currentPromptType = 'simple';
+        let currentPage = 1;
+        const limit = 10;
+
+        // Initialisation
+        $(document).ready(function() {
+            loadHistory();
+            
+            // Gestion des boutons de prompt
+            $('.prompt-btn').click(function() {
+                $('.prompt-btn').removeClass('active border-blue-300 border-green-300').addClass('border-gray-300');
+                $(this).addClass('active');
+                
+                if ($(this).attr('id') === 'btn-simple') {
+                    currentPromptType = 'simple';
+                    $(this).removeClass('border-gray-300').addClass('border-blue-300');
+                    $('#btn-engineered').removeClass('border-green-300').addClass('border-gray-300');
+                } else {
+                    currentPromptType = 'engineered';
+                    $(this).removeClass('border-gray-300').addClass('border-green-300');
+                    $('#btn-simple').removeClass('border-blue-300').addClass('border-gray-300');
+                }
+            });
+
+            // Génération
+            $('#btn-generate').click(generateCharade);
+
+            // Pagination historique
+            $('#btn-prev').click(function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadHistory();
+                }
+            });
+
+            $('#btn-next').click(function() {
+                currentPage++;
+                loadHistory();
+            });
+
+            // Recherche
+            $('#search-history').on('input', function() {
+                currentPage = 1;
+                loadHistory();
+            });
+
+            // Fermer modale
+            $('#btn-close-modal').click(function() {
+                $('#detail-modal').hide();
+            });
+
+            // Statistiques
+            $('#btn-show-stats').click(loadStats);
+
+            // Initialiser le bouton simple comme actif
+            $('#btn-simple').addClass('active border-blue-300');
+        });
+
+        async function generateCharade() {
+            const difficulty = $('#difficulty').val();
+            const targetWord = $('#target-word').val();
+            const numSegments = $('#num-segments').val();
+            
+            $('#loading').show();
+            $('#generation-result').hide();
+            
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        prompt_type: currentPromptType,
+                        difficulty: difficulty,
+                        target_word: targetWord,
+                        num_segments: parseInt(numSegments)
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayCharade(result.charade);
+                    toastr.success('Charade générée avec succès!');
+                    
+                    // Recharger l'historique
+                    currentPage = 1;
+                    loadHistory();
+                } else {
+                    toastr.error('Erreur: ' + (result.error || 'Génération échouée'));
+                }
+            } catch (error) {
+                toastr.error('Erreur de connexion: ' + error);
+            } finally {
+                $('#loading').hide();
+            }
+        }
+
+        function displayCharade(charade) {
+            if (!charade || !charade.target_word) {
+                $('#charade-display').html('<p class="text-red-500">Erreur de génération</p>');
+                return;
+            }
+            
+            let segmentsHtml = '';
+            if (charade.segments && charade.segments.length > 0) {
+                segmentsHtml = charade.segments.map(segment => `
+                    <div class="mb-3 p-3 bg-white rounded border">
+                        <div class="font-medium text-gray-800">${segment.clue}</div>
+                        <div class="text-sm text-gray-600 mt-1">
+                            <span class="font-medium">Réponse:</span> ${segment.answer_word}
+                            <span class="ml-3 text-gray-500">${segment.answer_ipa}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            $('#charade-display').html(`
+                <div class="mb-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h4 class="text-xl font-bold text-gray-800">${charade.target_word}</h4>
+                            <div class="flex items-center mt-1">
+                                <span class="px-2 py-1 text-xs rounded ${getDifficultyColor(charade.difficulty)}">
+                                    ${charade.difficulty}
+                                </span>
+                                <span class="ml-2 text-sm text-gray-500">
+                                    ${charade.segments ? charade.segments.length : 0} segments
+                                </span>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 rounded ${currentPromptType === 'simple' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">
+                            ${currentPromptType === 'simple' ? 'Simple' : 'CoT-FewShot'}
+                        </span>
+                    </div>
+                    
+                    <p class="text-gray-700 mb-3">${charade.clue_definition}</p>
+                    <p class="text-gray-600 mb-4"><span class="font-medium">API:</span> ${charade.target_ipa}</p>
+                </div>
+                
+                <div class="mb-4">
+                    <h5 class="font-bold text-gray-700 mb-2">Segments:</h5>
+                    ${segmentsHtml || '<p class="text-gray-500">Aucun segment</p>'}
+                </div>
+                
+                <div class="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
+                    <h5 class="font-bold text-blue-800 mb-1">Charade complète:</h5>
+                    <p class="text-blue-700 italic">${charade.full_riddle_text}</p>
+                </div>
+            `);
+            
+            $('#generation-result').show();
+        }
+
+        async function loadHistory() {
+            const search = $('#search-history').val();
+            
+            try {
+                const response = await fetch(`/history?page=${currentPage}&limit=${limit}&search=${encodeURIComponent(search)}`);
+                const data = await response.json();
+                
+                let historyHtml = '';
+                
+                if (data.charades.length === 0) {
+                    historyHtml = `<p class="text-gray-500 text-center py-4">Aucune charade dans l'historique</p>`;
+                } else {
+                    data.charades.forEach(charade => {
+                        historyHtml += `
+                            <div class="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer charade-item" data-id="${charade.id}">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">${charade.target_word_display || charade.target_word || 'Aléatoire'}</h4>
+                                        <p class="text-sm text-gray-600 truncate">${charade.clue_definition || ''}</p>
+                                        <div class="flex items-center mt-1">
+                                            <span class="text-xs px-2 py-1 rounded ${getDifficultyColor(charade.difficulty)}">
+                                                ${charade.difficulty}
+                                            </span>
+                                            <span class="ml-2 text-xs text-gray-500">
+                                                ${charade.segments_count || 0} segments
+                                            </span>
+                                            <span class="ml-2 text-xs ${charade.prompt_type === 'simple' ? 'text-blue-600' : 'text-green-600'}">
+                                                ${charade.prompt_type === 'simple' ? 'Simple' : 'CoT-FewShot'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    ${charade.user_rating ? `
+                                        <div class="text-yellow-500">
+                                            ${'★'.repeat(charade.user_rating)}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                <div class="text-xs text-gray-500 mt-2">
+                                    ${new Date(charade.created_at).toLocaleString()}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                $('#history-list').html(historyHtml);
+                $('#page-info').text(`Page ${currentPage} sur ${data.total_pages || 1}`);
+                
+                // Désactiver les boutons si nécessaire
+                $('#btn-prev').prop('disabled', currentPage === 1);
+                $('#btn-next').prop('disabled', currentPage >= data.total_pages);
+                
+                // Ajouter les événements de clic
+                $('.charade-item').click(function() {
+                    showCharadeDetail($(this).data('id'));
+                });
+                
+            } catch (error) {
+                console.error("Erreur de chargement de l'historique:", error);
+                toastr.error("Erreur de chargement de l'historique");
+            }
+        }
+
+        async function showCharadeDetail(generationId) {
+            try {
+                const response = await fetch(`/charade/${generationId}`);
+                const charade = await response.json();
+                
+                if (charade.error) {
+                    toastr.error(charade.error);
+                    return;
+                }
+                
+                let segmentsHtml = '';
+                if (charade.charade.segments) {
+                    segmentsHtml = charade.charade.segments.map(segment => `
+                        <div class="mb-3 p-3 bg-gray-50 rounded">
+                            <div class="font-medium text-gray-800">${segment.clue}</div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <span class="font-medium">Mot:</span> ${segment.answer_word}
+                                <span class="ml-3"><span class="font-medium">API:</span> ${segment.answer_ipa}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                
+                $('#modal-title').text(`Charade: ${charade.charade.target_word || 'Inconnu'}`);
+                
+                $('#modal-content').html(`
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-bold text-gray-700 mb-3">Informations</h4>
+                            <div class="space-y-2">
+                                <div class="flex">
+                                    <span class="font-medium w-32">Type:</span>
+                                    <span class="${charade.prompt_type === 'simple' ? 'text-blue-600' : 'text-green-600'}">
+                                        ${charade.prompt_type === 'simple' ? 'Simple' : 'CoT-FewShot'}
+                                    </span>
+                                </div>
+                                <div class="flex">
+                                    <span class="font-medium w-32">Difficulté:</span>
+                                    <span class="${getDifficultyTextColor(charade.difficulty)}">
+                                        ${charade.difficulty}
+                                    </span>
+                                </div>
+                                <div class="flex">
+                                    <span class="font-medium w-32">Mot cible:</span>
+                                    <span>${charade.target_word || 'Aléatoire'}</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="font-medium w-32">Créée le:</span>
+                                    <span>${new Date(charade.created_at).toLocaleString()}</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="font-medium w-32">Temps:</span>
+                                    <span>${charade.execution_time.toFixed(2)}s</span>
+                                </div>
+                            </div>
+                            
+                            ${charade.user_rating ? `
+                                <div class="mt-4">
+                                    <h5 class="font-bold text-gray-700 mb-2">Évaluation</h5>
+                                    <div class="text-yellow-500 text-xl">
+                                        ${'★'.repeat(charade.user_rating)}
+                                    </div>
+                                    ${charade.user_feedback ? `
+                                        <p class="text-gray-600 mt-2">${charade.user_feedback}</p>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-bold text-gray-700 mb-3">Charade</h4>
+                            <div class="mb-4">
+                                <p class="text-gray-800 font-medium">${charade.charade.clue_definition || ''}</p>
+                                <p class="text-gray-600 mt-1"><span class="font-medium">API:</span> ${charade.charade.target_ipa || ''}</p>
+                            </div>
+                            
+                            <h5 class="font-bold text-gray-700 mb-2">Segments (${charade.charade.segments ? charade.charade.segments.length : 0})</h5>
+                            ${segmentsHtml || '<p class="text-gray-500">Aucun segment</p>'}
+                            
+                            <div class="mt-4 p-3 bg-blue-50 rounded">
+                                <h5 class="font-bold text-blue-800 mb-1">Texte complet</h5>
+                                <p class="text-blue-700">${charade.charade.full_riddle_text || ''}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 pt-6 border-t">
+                        <button onclick="rateCharade('${generationId}')" class="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+                            <i class="fas fa-star mr-2"></i>Noter cette charade
+                        </button>
+                        <button onclick="deleteCharade('${generationId}')" class="ml-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+                            <i class="fas fa-trash mr-2"></i>Supprimer
+                        </button>
+                    </div>
+                `);
+                
+                $('#detail-modal').show();
+                
+            } catch (error) {
+                console.error('Erreur:', error);
+                toastr.error('Erreur de chargement des détails');
+            }
+        }
+
+        async function rateCharade(generationId) {
+            const rating = prompt('Notez cette charade (1 à 5 étoiles):');
+            if (!rating || rating < 1 || rating > 5) {
+                toastr.warning('Veuillez entrer une note entre 1 et 5');
+                return;
+            }
+            
+            const feedback = prompt('Feedback optionnel:');
+            
+            try {
+                const response = await fetch(`/rate/${generationId}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        rating: parseInt(rating),
+                        feedback: feedback || ''
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    toastr.success('Note enregistrée!');
+                    loadHistory();
+                    $('#detail-modal').hide();
+                } else {
+                    toastr.error(result.error || 'Erreur');
+                }
+            } catch (error) {
+                toastr.error('Erreur: ' + error);
+            }
+        }
+
+        async function deleteCharade(generationId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette charade?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/delete/${generationId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    toastr.success('Charade supprimée!');
+                    loadHistory();
+                    $('#detail-modal').hide();
+                }
+            } catch (error) {
+                toastr.error('Erreur de suppression');
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/stats');
+                const stats = await response.json();
+                
+                let statsHtml = `
+                    <div id="stats-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-4">
+                            <div class="p-6">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h3 class="text-2xl font-bold text-gray-800">Statistiques</h3>
+                                    <button onclick="document.getElementById('stats-modal').remove()"
+                                            class="text-gray-500 hover:text-gray-700">
+                                        <i class="fas fa-times text-2xl"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4 mb-6">
+                                    <div class="bg-blue-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-blue-800 mb-2">Total</h4>
+                                        <p class="text-3xl font-bold text-blue-600">${stats.total_charades}</p>
+                                        <p class="text-sm text-gray-600">charades générées</p>
+                                    </div>
+                                    
+                                    <div class="bg-green-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-green-800 mb-2">Note moyenne</h4>
+                                        <p class="text-3xl font-bold text-green-600">${stats.avg_rating}/5</p>
+                                        <p class="text-sm text-gray-600">sur toutes les charades</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-6">
+                                    <h4 class="font-bold text-gray-700 mb-3">Par type de prompt</h4>
+                                    <div class="space-y-3">
+                `;
+                
+                if (stats.prompt_stats.simple) {
+                    statsHtml += `
+                        <div class="flex justify-between items-center p-3 bg-blue-50 rounded">
+                            <div>
+                                <span class="font-medium text-blue-700">Simple</span>
+                                <div class="text-sm text-gray-600">
+                                    ${stats.prompt_stats.simple.count} charades
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-blue-600">${stats.prompt_stats.simple.avg_rating}/5</div>
+                                <div class="text-sm text-gray-600">${stats.prompt_stats.simple.avg_time}s</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (stats.prompt_stats.engineered) {
+                    statsHtml += `
+                        <div class="flex justify-between items-center p-3 bg-green-50 rounded">
+                            <div>
+                                <span class="font-medium text-green-700">CoT-FewShot</span>
+                                <div class="text-sm text-gray-600">
+                                    ${stats.prompt_stats.engineered.count} charades
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-green-600">${stats.prompt_stats.engineered.avg_rating}/5</div>
+                                <div class="text-sm text-gray-600">${stats.prompt_stats.engineered.avg_time}s</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                statsHtml += `
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h4 class="font-bold text-gray-700 mb-3">Dernières charades</h4>
+                                    <div class="space-y-2">
+                `;
+                
+                stats.recent_charades.forEach(charade => {
+                    statsHtml += `
+                        <div class="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
+                            <div class="truncate">
+                                <span class="font-medium">${charade.target_word || 'Aléatoire'}</span>
+                                <span class="text-xs ml-2 ${getDifficultyTextColor(charade.difficulty)}">
+                                    ${charade.difficulty}
+                                </span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="text-xs ${charade.prompt_type === 'simple' ? 'text-blue-600' : 'text-green-600'} mr-2">
+                                    ${charade.prompt_type === 'simple' ? 'Simple' : 'CoT-FewShot'}
+                                </span>
+                                ${charade.rating ? `
+                                    <span class="text-yellow-500 text-sm">
+                                        ${'★'.repeat(charade.rating)}
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                statsHtml += `
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                $('body').append(statsHtml);
+                
+            } catch (error) {
+                console.error('Erreur:', error);
+                toastr.error('Erreur de chargement des statistiques');
+            }
+        }
+
+        function getDifficultyColor(difficulty) {
+            switch(difficulty) {
+                case 'easy': return 'bg-green-100 text-green-800';
+                case 'medium': return 'bg-yellow-100 text-yellow-800';
+                case 'hard': return 'bg-red-100 text-red-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        function getDifficultyTextColor(difficulty) {
+            switch(difficulty) {
+                case 'easy': return 'text-green-600';
+                case 'medium': return 'text-yellow-600';
+                case 'hard': return 'text-red-600';
+                default: return 'text-gray-600';
+            }
+        }
+    </script>
+
+</body>
+</html>
