@@ -1,5 +1,14 @@
 # 🎭 Charade Generator – Flask & LLM
 
+Si vous obtenez l'erreur Avec Windows : `UnicodeDecodeError: 'charmap' codec can't decode byte 0x90 in position 970: character maps to <undefined>`, c'est un problème de la librairie PanPhon sur Windows, dont l'encoding par défaut est `cp1252`, or il faut lire le fichier en `utf-8`
+```python
+# File ".venv\Lib\site-packages\panphon\featuretable.py", line 84,
+# Read the file name with the phonemes and their feature specification
+  with files("panphon").joinpath(fn).open(encoding="utf-8") as f: # Should add the encoding="utf-8" parameter HERE 
+      df = pd.read_csv(f)  
+``` 
+
+
 Application web Flask permettant de **générer, stocker, consulter et évaluer des charades** générées automatiquement à l’aide d’un **modèle de langage (LLM)** via **LangChain et Google Generative AI**.
 
 Le projet inclut :

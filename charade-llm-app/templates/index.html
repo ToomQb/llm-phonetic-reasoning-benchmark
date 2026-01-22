@@ -260,6 +260,7 @@
                 });
                 
                 const result = await response.json();
+                console.log("result", result);
                 
                 if (result.success) {
                     displayCharade(result.charade);
@@ -328,6 +329,15 @@
                 <div class="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
                     <h5 class="font-bold text-blue-800 mb-1">Charade complète:</h5>
                     <p class="text-blue-700 italic">${charade.full_riddle_text}</p>
+                </div>
+
+                <div class="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
+                    <h5 class="font-bold text-blue-800 mb-1">Score de la charage générée: </h5>
+                    <p class="text-blue-700 italic">Target IPA : <b>${charade.target_ipa}</b></p>
+                    <p class="text-blue-700 italic">Generated IPA : <b>${charade.generated_ipa}</b></p>
+                    
+                    <p class="text-blue-700 italic">Levenshtein distance : <b>${charade.levenshtein_distance}</b></p>
+                    <p class="text-blue-700 italic">Score : <b>${charade.feature_edit_distance}</b></p>
                 </div>
             `);
             

@@ -267,6 +267,30 @@ Voici le contexte à analyser :
         
         charade = extract_json_from_text(answer_text)
         
+        # Compute the score
+        print("Charade", charade)
+        target_ipa = charade["target_ipa"].replace("/", "")
+        generated_ipa = ".".join([segment["answer_ipa"].replace("/", "") for segment in charade["segments"]])
+        print("target_ipa", target_ipa)
+        print("generated_ipa", generated_ipa)
+
+        feature_edit_distance = -1
+        levenshtein_distance = -1
+        try:
+            from panphon.distance import Distance
+            dist = Distance()
+            feature_edit_distance = dist.feature_edit_distance(target_ipa, generated_ipa)
+            levenshtein_distance = dist.levenshtein_distance(target_ipa, generated_ipa)
+
+            print("feature_edit_distance", feature_edit_distance)
+        except Exception as ex:
+            print("PanPhon Library Error : ", ex)
+
+        charade["feature_edit_distance"] = float(feature_edit_distance)
+        charade["levenshtein_distance"] = float(levenshtein_distance)
+        charade["generated_ipa"] = f"/{generated_ipa}/"
+
+
         return {
             "success": True,
             "charade": charade,

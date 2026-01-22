@@ -90,8 +90,6 @@ def generate():
         num_segments=num_segments,
         target_word=target_word if target_word else None
     )
-
-    print("Génération result:", result)
     
     if result['success']:
         # Enregistrer dans la base de données
