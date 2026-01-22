@@ -90,7 +90,7 @@ pip install -r requirements.txt
 *(si `requirements.txt` n’existe pas)* :
 
 ```bash
-pip install flask langchain langchain-google-genai
+pip install flask langchain langchain-google-genai python-dotenv
 ```
 
 ---
