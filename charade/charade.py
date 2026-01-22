@@ -2,7 +2,8 @@ import pandas as pd
 from phonemizer import phonemize
 from collections import defaultdict
 import random
-import gc  
+import gc
+import json 
 
 class GenerateurAutomatique:
     def __init__(self, lexique_path):
@@ -14,7 +15,6 @@ class GenerateurAutomatique:
         self.mots_a_traiter_prets = [] 
 
     def _phonetiser(self, words):
-
         phons = phonemize(words, language="fr-fr", backend="espeak", strip=True, with_stress=False)
         if isinstance(phons, str): phons = [phons]
         return [p.replace(" ", "").replace("ː", "") for p in phons]
@@ -37,25 +37,23 @@ class GenerateurAutomatique:
         for w, p, f, l in zip(df_comp["ortho"], phons_comp, df_comp["freqfilms2"], df_comp["lemme"]):
             if p: self.lexicon_ph[p].append({'mot': w, 'score': f, 'lemme': l})
 
-        # Préparation des mots cibles
         cibles = df[df["ortho"].str.len() == nb_lettres_cible]["ortho"].unique().tolist()
         random.shuffle(cibles)
         
-        print(f"Phonétisation des {len(cibles)} cibles (prévention crash)...")
+        print(f"Phonétisation des {len(cibles)} cibles...")
         phons_cibles = self._phonetiser(cibles)
         self.mots_a_traiter_prets = list(zip(cibles, phons_cibles))
         
-        del df
-        del df_comp
+        del df, df_comp
         gc.collect()
-        print(f"Prêt à analyser {len(self.mots_a_traiter_prets)} mots.")
 
     def chercher(self, mot_cible, cible_ph, score_max_qualite=80.0, max_solutions=3):
         lemme_cible = self.table_lemmes.get(mot_cible, mot_cible)
         resultats = []
         compteur_essais = [0]
 
-        def backtrack(reste, chemin, scores):
+        # On modifie le backtrack pour passer 'chemin_ph' (les phonèmes trouvés)
+        def backtrack(reste, chemin, chemin_ph, scores):
             if len(resultats) >= max_solutions: return
             compteur_essais[0] += 1
             if compteur_essais[0] > 1000: return 
@@ -64,7 +62,11 @@ class GenerateurAutomatique:
                 if len(chemin) >= 2:
                     score_moyen = sum(scores) / len(scores)
                     if score_moyen < score_max_qualite:
-                        resultats.append((chemin, score_moyen))
+                        # On stocke les mots ET leurs phonèmes
+                        resultats.append({
+                            "composants": chemin,
+                            "composants_phonetique": chemin_ph
+                        })
                 return
             
             if len(chemin) >= 4: return
@@ -75,39 +77,46 @@ class GenerateurAutomatique:
                     options = sorted(self.lexicon_ph[son], key=lambda x: x['score'], reverse=True)[:3]
                     for item in options:
                         if item['mot'] != mot_cible and item['lemme'] != lemme_cible:
-                            backtrack(reste[i:], chemin + [item['mot']], scores + [item['score']])
+                            backtrack(
+                                reste[i:], 
+                                chemin + [item['mot']], 
+                                chemin_ph + [son], # On garde la trace du son
+                                scores + [item['score']]
+                            )
 
-        backtrack(cible_ph, [], [])
+        backtrack(cible_ph, [], [], [])
         return resultats
 
 if __name__ == "__main__":
     SCORE_LIMITE = 80.0
-    MAX_SOL_PAR_MOT = 10
+    MAX_SOL_PAR_MOT = 5
     NB_LETTRES = 7
-    FREQUENCE_NETTOYAGE = 500 
     
     gen = GenerateurAutomatique("Lexique383.tsv")
     gen.charger_lexique(nb_lettres_cible=NB_LETTRES)
     
     print(f"Début de la génération...")
+    
+    donnees_finales = []
 
-    with open("charades_complet.txt", "w", encoding="utf-8") as f:
-        for i, (mot, phoneme) in enumerate(gen.mots_a_traiter_prets):
-            sols = gen.chercher(mot, phoneme, score_max_qualite=SCORE_LIMITE, max_solutions=MAX_SOL_PAR_MOT)
-            
-            if sols:
-                f.write(f"MOT {i+1} : {mot.upper()}\n")
-                for s in sols:
-                    f.write(f"  [{s[1]:.2f}] {' + '.join(s[0])}\n")
-                f.write("-" * 25 + "\n")
-                f.flush() 
+    for i, (mot, phoneme) in enumerate(gen.mots_a_traiter_prets):
+        sols = gen.chercher(mot, phoneme, score_max_qualite=SCORE_LIMITE, max_solutions=MAX_SOL_PAR_MOT)
+        
+        if sols:
+            # Création de l'objet pour ce mot
+            entree = {
+                "mot_cible": mot.upper(),
+                "phonetique": phoneme,
+                "solutions": sols
+            }
+            donnees_finales.append(entree)
 
-            if i % 100 == 0:
-                print(f"Progression : {i}/{len(gen.mots_a_traiter_prets)} traités...")
+        if i % 100 == 0:
+            print(f"Progression : {i}/{len(gen.mots_a_traiter_prets)}...")
+            gc.collect()
 
-            # --- NETTOYAGE MÉMOIRE TOUS LES 500 MOTS ---
-            if i > 0 and i % FREQUENCE_NETTOYAGE == 0:
-                print(f"--- [INFO] Vidage mémoire (Mot {i}) ---")
-                gc.collect()
+    # Écriture du fichier JSON final
+    with open("charades.json", "w", encoding="utf-8") as f:
+        json.dump(donnees_finales, f, ensure_ascii=False, indent=4)
 
-    print("\nTerminé ! Consultez 'charades_complet.txt'.")
+    print(f"\nTerminé ! {len(donnees_finales)} mots avec solutions enregistrés dans 'charades.json'.")
