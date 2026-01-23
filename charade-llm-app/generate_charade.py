@@ -32,15 +32,18 @@ def extract_json_from_text(answer_text: str) -> dict:
 # PROMPTS
 # =====================================================
 
-PROMPT_CHARADE_SIMPLE = """Génère une charade phonétique en français de difficulté {difficulty}.
+PROMPT_CHARADE_SIMPLE = """Génère une charade en français {target_word_instruction} et donne les réponses avec."""
 
-{target_word_instruction}
+PROMPT_EXTRACT_CHARADE_JSON = """Pour la charade donnée, extrait les informations ci-dessous au format JSON.
+
+Voici la charade : 
+{charade}
 
 Retourne UNIQUEMENT un JSON avec cette structure exacte:
 {{
   "id": "charade_XXX",
   "language": "fr",
-  "difficulty": "{difficulty}",
+  "difficulty": "difficulty",
   "target_word": "le mot final",
   "target_phonemes": ["phonème1", "phonème2"],
   "target_ipa": "/transcription IPA complète/",
@@ -56,19 +59,14 @@ Retourne UNIQUEMENT un JSON avec cette structure exacte:
   ],
   "full_riddle_text": "Mon premier... Mon second... Mon tout..."
 }}
+"""
 
-Génère maintenant une charade."""
 
-
-PROMPT_CHARADE_ENGINEERED = """Tu es un générateur de charades phonétiques. Suis strictement ces instructions pour créer une charade correcte, naturelle et devinable.
-
-{target_word_instruction}
+PROMPT_CHARADE_ENGINEERED = """Génère une charade en français {target_word_instruction}.
 
 **ÉTAPES À SUIVRE (Chain of Thought) :**
 
 1. **Choisir le mot final ("Mon tout")**
-   {step_1_instruction}
-   - Difficulté : {difficulty}
    - Écris une phrase simple pour décrire ce mot, qui sera "Mon tout".
 
 2. **Transcrire le mot final en phonétique**
@@ -92,89 +90,46 @@ PROMPT_CHARADE_ENGINEERED = """Tu es un générateur de charades phonétiques. S
      - Mon troisième est ...
      - Mon tout est ...
 
-**EXEMPLES (Few-shot learning) :**
+**Exemple de génération(Few-shot learning) :**
 
-**Exemple 1 :**
-{{
-  "id": "charade_001",
-  "language": "fr",
-  "difficulty": "easy",
-  "target_word": "balançoire",
-  "target_phonemes": ["ba", "lɑ̃", "swaʁ"],
-  "target_ipa": "/ba.lɑ̃.swaʁ/",
-  "clue_definition": "Siège suspendu pour s'amuser.",
-  "segments": [
-    {{
-      "position": 1,
-      "clue": "Mon premier est le contraire de haut",
-      "answer_word": "bas",
-      "answer_ipa": "/ba/",
-      "phonemes": ["ba"]
-    }},
-    {{
-      "position": 2,
-      "clue": "Mon deuxième n'est pas rapide",
-      "answer_word": "lent",
-      "answer_ipa": "/lɑ̃/",
-      "phonemes": ["lɑ̃"]
-    }},
-    {{
-      "position": 3,
-      "clue": "Mon troisième est le moment où le soleil se couche",
-      "answer_word": "soir",
-      "answer_ipa": "/swaʁ/",
-      "phonemes": ["swaʁ"]
-    }}
-  ],
-  "full_riddle_text": "Mon premier est le contraire de haut. Mon deuxième n'est pas rapide. Mon troisième est le moment où le soleil se couche. Mon tout est un siège suspendu pour s'amuser."
-}}
+Exemple de charade 1 :
+- Etape 1 : 
+    - Mot final choisi: Charade 
+    - Définition du mot choisi: Mon tout est une devinette.
+- Etape 2: 
+    - Transcription du mot final 'Charade' en phonétique = \ʃa.ʁad\
+- Etape 3: 
+    - Diviser la phonétique du mot final 'Charade' en 3 morceaux : \ʃa\, \ʁa\ et \d\
+- Etape 4: 
+    - \ʃa\ = Chat (Mon premier est un animal de compagnie)
+    - \ʁa\ = Rat (Mon second est un mammifère rongeur omnivore, qui vit généralement dans les égouts ou en laboratoire)
+    - \d\ ≈ \dø\ = Deux (Mon troisième est le chiffre qui suit un)
+- Etape 5:
+    - Mon premier est un animal de compagnie. (Chat)
+    - Mon second est un mammifère rongeur omnivore, qui vit généralement dans les égouts ou en laboratoire. (Rat)
+    - Mon troisième est le chiffre qui suit un. (Deux)
+    - Mon tout est une devinette. (Charade)
 
-**Exemple 2 :**
-{{
-  "id": "charade_002",
-  "language": "fr",
-  "difficulty": "easy",
-  "target_word": "biscuit",
-  "target_phonemes": ["bis", "kɥi"],
-  "target_ipa": "/bis.kɥi/",
-  "clue_definition": "Aliment sucré ou salé que l'on mange souvent au goûter.",
-  "segments": [
-    {{
-      "position": 1,
-      "clue": "Mon premier est un vent léger et frais",
-      "answer_word": "bise",
-      "answer_ipa": "/bis/",
-      "phonemes": ["bis"]
-    }},
-    {{
-      "position": 2,
-      "clue": "Mon second est un pronom interrogatif pour poser une question sur une personne",
-      "answer_word": "qui",
-      "answer_ipa": "/kɥi/",
-      "phonemes": ["kɥi"]
-    }}
-  ],
-  "full_riddle_text": "Mon premier est un vent léger et frais. Mon second est un pronom interrogatif pour poser une question sur une personne. Mon tout est un aliment sucré ou salé que l'on mange souvent au goûter."
-}}
+---
+Exemple de charade 2 :
+- Etape 1 : 
+    - Mot final choisi: Cléopâtre 
+    - Définition du mot choisi: Jules César aime bien mon tout.
+- Etape 2: 
+    - Transcription du mot final 'Cléopâtre' en phonétique = \kle.ɔ.patʁ\
+- Etape 3: 
+    - Diviser la phonétique du mot final 'Cléopâtre' en 3 morceaux : \kle\, \ɔ\ et \patʁ\
+- Etape 4: 
+    - \kle\ = Clé (Mon premier ouvre les portes)
+    - \ɔ\ ≈ \o\ = Eau (Mon second se boit)
+    - \patʁ\ = Pâtre (Mon troisième garde les troupeaux de bœufs, de vaches, de chèvres)
+- Etape 5:
+    - Mon premier ouvre les portes. (Clé)
+    - Mon second se boit. (Eau)
+    - Mon troisième garde les troupeaux de bœufs, de vaches, de chèvres. (Pâtre)
+    - Jules César aime bien mon tout. (Cléopâtre)
 
-**INSTRUCTIONS FINALES :**
-- Génère maintenant UNE NOUVELLE charade différente des exemples
-- Respecte EXACTEMENT le format JSON
-- Assure-toi que la phonétique est correcte
-- Varie le nombre de segments (2 à 4)
-- Réponds UNIQUEMENT avec le JSON, sans texte avant ou après
-- Difficulté : {difficulty}
-
-Génère la charade :"""
-
-
-CHARADE_CONTEXT = """
-PARAMÈTRES DE GÉNÉRATION :
-    Difficulté : {difficulty}
-    Nombre de segments souhaités : {num_segments}
-    {target_word_context}
-"""
-
+Génère la charade avec ses réponses."""
 
 # =====================================================
 # MAIN API
@@ -203,37 +158,22 @@ def generate_charade(
     
     # Construire les instructions pour le mot cible
     if target_word:
-        target_word_instruction = f"**IMPORTANT : Tu DOIS créer une charade pour le mot '{target_word}'.**"
-        step_1_instruction = f"- Utilise OBLIGATOIREMENT le mot : **{target_word}**"
-        target_word_context = f"Mot cible imposé : {target_word}"
+        target_word_instruction = f"avec le mot '{target_word}'."
     else:
-        target_word_instruction = ""
-        step_1_instruction = "- Sélectionne un mot naturel et courant en français (nom commun ou composé simple), avec **au moins 2 syllabes**."
-        target_word_context = "Aucun mot cible imposé (génération libre)"
+        target_word_instruction = f"avec un mot aléatoire."
     
     # Choisir le prompt et la température
+    temperature = kwargs.get('temperature', 0.7)
     if use_prompt_engineering:
         instruction = PROMPT_CHARADE_ENGINEERED.format(
-            difficulty=difficulty,
-            target_word_instruction=target_word_instruction,
-            step_1_instruction=step_1_instruction
+            target_word_instruction=target_word_instruction
         )
-        temperature = kwargs.get('temperature', 0.7)
         prompt_type = "engineered"
     else:
         instruction = PROMPT_CHARADE_SIMPLE.format(
-            difficulty=difficulty,
             target_word_instruction=target_word_instruction
         )
-        temperature = kwargs.get('temperature', 0.8)
         prompt_type = "simple"
-    
-    # Construire le contexte
-    context = CHARADE_CONTEXT.format(
-        difficulty=difficulty,
-        num_segments=num_segments,
-        target_word_context=target_word_context
-    )
     
     # Créer le LLM
     llm = ChatGoogleGenerativeAI(
@@ -242,25 +182,25 @@ def generate_charade(
         temperature=temperature
     )
     
-    # Créer le prompt template
-    prompt = ChatPromptTemplate.from_template(
-        """Instruction :
-{instruction}
-
-Voici le contexte à analyser :
-{context}"""
-    )
-    
-    # Créer la chaîne
-    chain = prompt | llm | StrOutputParser()
-    
     try:
         import time
         start_time = time.time()
         
-        answer_text = chain.invoke({
-            "instruction": instruction,
-            "context": context
+        # Etape 1 : Générer la charade
+        generate_charade_context = instruction
+        generate_charade_prompt = ChatPromptTemplate.from_template("""{generate_charade_context}""")
+        generate_charade_chain = generate_charade_prompt | llm | StrOutputParser()
+        charade_text = generate_charade_chain.invoke({
+            "generate_charade_context": generate_charade_context
+        })
+
+        print("charade_text", charade_text)
+        # Etape 2: Transformer au format JSON attendu
+        extract_json_context = PROMPT_EXTRACT_CHARADE_JSON.format(charade=charade_text)
+        extract_json_prompt = ChatPromptTemplate.from_template("""{extract_json_context}""")
+        extract_json_chain = extract_json_prompt | llm | StrOutputParser()
+        answer_text = extract_json_chain.invoke({
+            "extract_json_context": extract_json_context
         })
         
         execution_time = time.time() - start_time
@@ -283,6 +223,8 @@ Voici le contexte à analyser :
             levenshtein_distance = dist.levenshtein_distance(target_ipa, generated_ipa)
 
             print("feature_edit_distance", feature_edit_distance)
+            print("levenshtein_distance", levenshtein_distance)
+
         except Exception as ex:
             print("PanPhon Library Error : ", ex)
 
