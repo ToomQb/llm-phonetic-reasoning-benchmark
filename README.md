@@ -2,6 +2,8 @@
 
 Lien de la démonstration du projet : https://youtu.be/HLZKZhoPZ6M
 
+Lien Overleaf du rapport : https://www.overleaf.com/read/fhbsxfhmhhfd#80b575
+
 ## Structure du projet Charade-llm-app
 
 ```text
