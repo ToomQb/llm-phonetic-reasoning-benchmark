@@ -1,7 +1,7 @@
 # P-CHARM :  Ahonetic charade generation
 Lien de la démonstration du projet : https://youtu.be/HLZKZhoPZ6M
 
-## Structure du projet
+## Structure du projet Charade-llm-app
 
 ```text
 .
