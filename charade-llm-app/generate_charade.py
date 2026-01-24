@@ -59,6 +59,12 @@ Retourne UNIQUEMENT un JSON avec cette structure exacte:
   ],
   "full_riddle_text": "Mon premier... Mon second... Mon tout..."
 }}
+
+Important:
+- Ne change pas la définition donnée pour chaque mot dans la charade.
+- Pour les segments.answer_ipa donne la phonétique de chaque mot à deviner (si ce n'est pas donné dans la charade d'en haut.), mais ne décompose pas le mot final en petits morceaux.
+- Ne recrée pas la charade juste extrait les informations utiles pour le JSON.
+
 """
 
 
@@ -73,8 +79,9 @@ PROMPT_CHARADE_ENGINEERED = """Génère une charade en français {target_word_in
    - Utilise l'alphabet phonétique international (API) pour le mot final.
    - Exemple : Biscuit → /bis.kɥi/
 
-3. **Découper le mot en morceaux phonétiques**
+3. **Découper le mot en morceaux phonétiques de mots existants dans le dictionnaire**
    - Divise le mot final en **2, 3 ou 4 morceaux phonétiques**.
+   - Assure toi que chaque morceaux de phonétique que tu décides de prendre et de former, c'est un mot mais pas du bruit ou une lettre.
    - Chaque morceau doit être **prononçable individuellement**, peut combiner plusieurs sons, mais **tous les sons du mot final doivent être utilisés**.
    - Évite de deviner juste une lettre isolée.
 
