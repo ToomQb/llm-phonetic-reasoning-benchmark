@@ -1,4 +1,4 @@
-# P-CHARM :  Ahonetic charade generation
+# P-CHARM :  Phonetic CHArade Reasoning Model for LLMs
 Lien de la démonstration du projet : https://youtu.be/HLZKZhoPZ6M
 
 ## Structure du projet Charade-llm-app
