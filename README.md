@@ -8,6 +8,7 @@ French phonetic charades — structured puzzles requiring explicit
 sound-level decomposition and recomposition.
 
 Présentation du projet : https://youtu.be/HLZKZhoPZ6M
+
 Rapport de recherche complet : https://www.overleaf.com/read/fhbsxfhmhhfd#80b575
 
 ---
