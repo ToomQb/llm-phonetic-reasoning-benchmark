@@ -9,9 +9,9 @@ sound-level decomposition and recomposition.
 
 [Présentation du projet](https://youtu.be/HLZKZhoPZ6M)
 
-[Rapport de recherche complet](LLM_P_CHARM.pdf)
+[Rapport de recherche complet](assets/LLM_P_CHARM.pdf)
 
-![Capture d'écran de l'application](screen_demo.png)
+![Capture d'écran de l'application](assets/screen_app_demo.png)
 
 ---
 
