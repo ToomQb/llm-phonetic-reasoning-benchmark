@@ -9,7 +9,7 @@ sound-level decomposition and recomposition.
 
 Présentation du projet : https://youtu.be/HLZKZhoPZ6M
 
-Rapport de recherche complet : https://www.overleaf.com/read/fhbsxfhmhhfd#80b575
+Rapport de recherche complet : (LLM_P_CHARM.pdf)
 
 ---
 
