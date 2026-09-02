@@ -49,6 +49,8 @@ Les expérimentations ont été menées sur **Gemini 2.5 Flash** et **Gemini 2.5
 - Le guided prompting contraint le modèle vers des items lexicaux valides et un raisonnement plus explicite
 - Les performances restent sensibles à la complexité phonétique du mot cible (ex. *hippopotame* vs *enfant*)
 
+![Graphiques des résultats obtenus](results_P_CHARM.png)
+
 ---
 
 ## Méthodologie
