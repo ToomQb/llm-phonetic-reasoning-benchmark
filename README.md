@@ -7,9 +7,9 @@ capabilities of Large Language Models** through the case study of
 French phonetic charades — structured puzzles requiring explicit 
 sound-level decomposition and recomposition.
 
-Présentation du projet : https://youtu.be/HLZKZhoPZ6M
+[Présentation du projet](https://youtu.be/HLZKZhoPZ6M)
 
-Rapport de recherche complet : (LLM_P_CHARM.pdf)
+[Rapport de recherche complet](LLM_P_CHARM.pdf)
 
 ---
 
