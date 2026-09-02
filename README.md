@@ -9,7 +9,7 @@ sound-level decomposition and recomposition.
 
 [Présentation du projet](https://youtu.be/HLZKZhoPZ6M)
 
-[Rapport de recherche complet](assets/LLM_P_CHARM.pdf)
+[Rapport de recherche complet](LLM_P_CHARM.pdf)
 
 ![Capture d'écran de l'application](assets/screen_app_demo.png)
 
@@ -49,7 +49,7 @@ Les expérimentations ont été menées sur **Gemini 2.5 Flash** et **Gemini 2.5
 - Le guided prompting contraint le modèle vers des items lexicaux valides et un raisonnement plus explicite
 - Les performances restent sensibles à la complexité phonétique du mot cible (ex. *hippopotame* vs *enfant*)
 
-![Graphiques des résultats obtenus](results_P_CHARM.png)
+![Graphiques des résultats obtenus](assets/results_P_CHARM.png)
 
 ---
 
