@@ -11,6 +11,8 @@ sound-level decomposition and recomposition.
 
 [Rapport de recherche complet](LLM_P_CHARM.pdf)
 
+![Capture d'écran de l'application](screen_demo.png)
+
 ---
 
 ## Contexte et motivation
